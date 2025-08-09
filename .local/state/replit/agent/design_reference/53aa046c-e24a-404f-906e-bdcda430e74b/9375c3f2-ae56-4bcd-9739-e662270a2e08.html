@@ -1,0 +1,664 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JIRA Worklog Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    'inter': ['Inter', 'system-ui', 'sans-serif'],
+                },
+                colors: {
+                    'brand': {
+                        50: '#eff6ff',
+                        500: '#3b82f6',
+                        600: '#2563eb',
+                        700: '#1d4ed8',
+                    }
+                }
+            }
+        }
+    };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-inter">
+    <!-- @COMPONENT: Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-sm"></i>
+                        </div>
+                        <h1 class="text-xl font-semibold text-gray-900">JIRA Worklog Dashboard</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- @COMPONENT: RefreshButton -->
+                    <button data-event="click:handleManualRefresh" class="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <i class="fas fa-sync-alt text-xs"></i>
+                        <span>Refresh</span>
+                    </button>
+                    <!-- @COMPONENT: SettingsButton -->
+                    <button data-event="click:toggleSettings" class="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white bg-brand-500 border border-transparent rounded-md shadow-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <i class="fas fa-cog text-xs"></i>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- @COMPONENT: DashboardSummary -->
+        <div class="mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Total Hours Card -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Total Hours Logged</p>
+                            <p class="text-3xl font-bold text-gray-900" data-bind="totalHours">32.5h</p>
+                            <p class="text-xs text-gray-500 mt-1" data-bind="worklogDate">Friday, Dec 15, 2023</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clock text-blue-600 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Assignees Card -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Active Assignees</p>
+                            <p class="text-3xl font-bold text-gray-900" data-bind="activeAssignees">4</p>
+                            <p class="text-xs text-green-600 mt-1">
+                                <i class="fas fa-arrow-up text-xs"></i>
+                                2 more than yesterday
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-users text-green-600 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tasks Worked Card -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Tasks Worked</p>
+                            <p class="text-3xl font-bold text-gray-900" data-bind="tasksWorked">12</p>
+                            <p class="text-xs text-gray-500 mt-1">Across all assignees</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-tasks text-purple-600 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: DashboardSummary -->
+
+        <!-- @COMPONENT: AssigneeWorklogTable -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Assignee Worklog Breakdown</h2>
+                <p class="text-sm text-gray-500 mt-1">Individual worklog hours for <span data-bind="currentDate">Friday, December 15, 2023</span></p>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Assignee
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Tasks Completed
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Hours Logged
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Progress
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <!-- @MAP: assigneeWorklogs.map(assignee => ( -->
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-brand-500 flex items-center justify-center">
+                                            <span class="text-sm font-medium text-white" data-bind="assignee.initials">JD</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900" data-bind="assignee.name">John Doe</div>
+                                        <div class="text-sm text-gray-500" data-bind="assignee.email">john.doe@company.com</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900" data-bind="assignee.tasksCount">5</div>
+                                <div class="text-sm text-gray-500">tasks</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900" data-bind="assignee.hoursLogged">8.5h</div>
+                                <div class="text-sm text-gray-500">logged</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-brand-500 h-2 rounded-full" style="width: 85%" data-bind="assignee.progressPercent"></div>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">85% of target</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                    Active
+                                </span>
+                            </td>
+                        </tr>
+
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
+                                            <span class="text-sm font-medium text-white">SA</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">Sarah Adams</div>
+                                        <div class="text-sm text-gray-500">sarah.adams@company.com</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">3</div>
+                                <div class="text-sm text-gray-500">tasks</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">7.0h</div>
+                                <div class="text-sm text-gray-500">logged</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-brand-500 h-2 rounded-full" style="width: 70%"></div>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">70% of target</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                    Active
+                                </span>
+                            </td>
+                        </tr>
+
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center">
+                                            <span class="text-sm font-medium text-white">MJ</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">Mike Johnson</div>
+                                        <div class="text-sm text-gray-500">mike.johnson@company.com</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">4</div>
+                                <div class="text-sm text-gray-500">tasks</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">9.0h</div>
+                                <div class="text-sm text-gray-500">logged</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-emerald-500 h-2 rounded-full" style="width: 100%"></div>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">100% of target</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                    Active
+                                </span>
+                            </td>
+                        </tr>
+
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center">
+                                            <span class="text-sm font-medium text-white">LC</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">Lisa Chen</div>
+                                        <div class="text-sm text-gray-500">lisa.chen@company.com</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">0</div>
+                                <div class="text-sm text-gray-500">tasks</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">0.0h</div>
+                                <div class="text-sm text-gray-500">logged</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-gray-300 h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">0% of target</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    Inactive
+                                </span>
+                            </td>
+                        </tr>
+                        <!-- @END_MAP )) -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: AssigneeWorklogTable -->
+
+        <!-- @COMPONENT: TaskDetails -->
+        <div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Task Details</h2>
+                <p class="text-sm text-gray-500 mt-1">Individual tasks and their worklog entries</p>
+            </div>
+            
+            <div class="divide-y divide-gray-200">
+                <!-- @MAP: tasks.map(task => ( -->
+                <div class="px-6 py-4">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <h3 class="text-sm font-medium text-gray-900" data-bind="task.key">DEV-1234</h3>
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800" data-bind="task.status">
+                                    In Progress
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1" data-bind="task.summary">Implement user authentication flow</p>
+                            <div class="flex items-center space-x-4 mt-2">
+                                <div class="flex items-center space-x-1">
+                                    <i class="fas fa-user text-xs text-gray-400"></i>
+                                    <span class="text-xs text-gray-500" data-bind="task.assignee">John Doe</span>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    <i class="fas fa-clock text-xs text-gray-400"></i>
+                                    <span class="text-xs text-gray-500" data-bind="task.timeSpent">2.5h logged</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium text-gray-900" data-bind="task.worklogHours">2.5h</div>
+                            <div class="text-xs text-gray-500">worklog</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <h3 class="text-sm font-medium text-gray-900">DEV-1235</h3>
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                    Done
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">Fix responsive layout on mobile devices</p>
+                            <div class="flex items-center space-x-4 mt-2">
+                                <div class="flex items-center space-x-1">
+                                    <i class="fas fa-user text-xs text-gray-400"></i>
+                                    <span class="text-xs text-gray-500">Sarah Adams</span>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    <i class="fas fa-clock text-xs text-gray-400"></i>
+                                    <span class="text-xs text-gray-500">4.0h logged</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium text-gray-900">4.0h</div>
+                            <div class="text-xs text-gray-500">worklog</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+        </div>
+        <!-- @END_COMPONENT: TaskDetails -->
+    </div>
+
+    <!-- @COMPONENT: SettingsModal -->
+    <!-- @STATE: isSettingsOpen:boolean = false -->
+    <div id="settingsModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900" id="modal-title">
+                            JIRA Settings
+                        </h3>
+                        <button data-event="click:closeSettings" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- JIRA Configuration Section -->
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-900 mb-3">JIRA API Configuration</h4>
+                            <div class="grid grid-cols-1 gap-4">
+                                <div>
+                                    <label for="jiraUrl" class="block text-sm font-medium text-gray-700">JIRA URL</label>
+                                    <input type="url" id="jiraUrl" name="jiraUrl" placeholder="https://your-domain.atlassian.net" 
+                                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 text-sm">
+                                    <!-- @IMPLEMENTATION: Store in secure configuration -->
+                                </div>
+                                <div>
+                                    <label for="apiToken" class="block text-sm font-medium text-gray-700">API Token</label>
+                                    <input type="password" id="apiToken" name="apiToken" placeholder="Your JIRA API token" 
+                                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 text-sm">
+                                    <!-- @IMPLEMENTATION: Store securely, never log -->
+                                </div>
+                                <div>
+                                    <label for="userEmail" class="block text-sm font-medium text-gray-700">User Email</label>
+                                    <input type="email" id="userEmail" name="userEmail" placeholder="your-email@company.com" 
+                                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 text-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Assignee Management Section -->
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-medium text-gray-900">Assignee IDs</h4>
+                                <button data-event="click:addAssignee" class="inline-flex items-center px-3 py-1 text-xs font-medium text-brand-600 bg-brand-50 border border-brand-200 rounded-md hover:bg-brand-100">
+                                    <i class="fas fa-plus text-xs mr-1"></i>
+                                    Add Assignee
+                                </button>
+                            </div>
+                            
+                            <div class="space-y-2" id="assigneeList">
+                                <!-- @MAP: assigneeIds.map((assignee, index) => ( -->
+                                <div class="flex items-center space-x-2 p-3 bg-gray-50 rounded-md">
+                                    <input type="text" placeholder="712020:021cc494-3a62-45a8-bd3d-db7e0a9dd057" 
+                                           value="712020:021cc494-3a62-45a8-bd3d-db7e0a9dd057" data-mock="true"
+                                           class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-brand-500 focus:border-brand-500">
+                                    <button data-event="click:removeAssignee" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash text-sm"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="flex items-center space-x-2 p-3 bg-gray-50 rounded-md">
+                                    <input type="text" placeholder="Enter assignee ID" 
+                                           value="712020:8d6a65c2-5f1a-4b2c-9e3d-1a2b3c4d5e6f" data-mock="true"
+                                           class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-brand-500 focus:border-brand-500">
+                                    <button data-event="click:removeAssignee" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash text-sm"></i>
+                                    </button>
+                                </div>
+                                <!-- @END_MAP )) -->
+                            </div>
+                            
+                            <p class="text-xs text-gray-500 mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Find assignee IDs in JIRA user profiles or by using the JIRA REST API
+                            </p>
+                        </div>
+
+                        <!-- Schedule Configuration -->
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-900 mb-3">Schedule Configuration</h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="scheduleTime" class="block text-sm font-medium text-gray-700">Daily Run Time</label>
+                                    <input type="time" id="scheduleTime" name="scheduleTime" value="09:00" 
+                                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 text-sm">
+                                </div>
+                                <div>
+                                    <label for="timezone" class="block text-sm font-medium text-gray-700">Timezone</label>
+                                    <select id="timezone" name="timezone" 
+                                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 text-sm">
+                                        <option>UTC</option>
+                                        <option selected>America/New_York</option>
+                                        <option>Europe/London</option>
+                                        <option>Asia/Tokyo</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button data-event="click:saveSettings" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-500 text-base font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Save Settings
+                    </button>
+                    <button data-event="click:testConnection" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Test Connection
+                    </button>
+                    <button data-event="click:closeSettings" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 sm:mt-0 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: SettingsModal -->
+
+    <!-- @COMPONENT: LoadingOverlay -->
+    <div id="loadingOverlay" class="fixed inset-0 z-40 hidden bg-gray-500 bg-opacity-75 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 shadow-xl">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-500"></div>
+                <span class="text-sm font-medium text-gray-900">Fetching worklog data...</span>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: LoadingOverlay -->
+
+    <!-- @COMPONENT: NotificationToast -->
+    <div id="notificationToast" class="fixed top-4 right-4 z-50 hidden max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto">
+        <div class="p-4">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i id="toastIcon" class="fas fa-check-circle text-green-400"></i>
+                </div>
+                <div class="ml-3 w-0 flex-1 pt-0.5">
+                    <p class="text-sm font-medium text-gray-900" id="toastTitle">Success!</p>
+                    <p class="mt-1 text-sm text-gray-500" id="toastMessage">Worklog data updated successfully.</p>
+                </div>
+                <div class="ml-4 flex-shrink-0 flex">
+                    <button data-event="click:closeToast" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+                        <i class="fas fa-times text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: NotificationToast -->
+
+    <script>
+    (function() {
+        'use strict';
+        
+        // TODO: Implement JIRA API integration
+        // TODO: Implement worklog calculation logic
+        // TODO: Implement assignee data fetching
+        // TODO: Implement settings persistence
+        // TODO: Implement scheduled job functionality
+        
+        // UI Interaction Logic
+        function toggleSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function closeSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.add('hidden');
+        }
+
+        function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('hidden');
+        }
+
+        function showNotification(title, message, type = 'success') {
+            const toast = document.getElementById('notificationToast');
+            const icon = document.getElementById('toastIcon');
+            const titleEl = document.getElementById('toastTitle');
+            const messageEl = document.getElementById('toastMessage');
+            
+            // Set icon based on type
+            if (type === 'success') {
+                icon.className = 'fas fa-check-circle text-green-400';
+            } else if (type === 'error') {
+                icon.className = 'fas fa-exclamation-circle text-red-400';
+            } else if (type === 'warning') {
+                icon.className = 'fas fa-exclamation-triangle text-yellow-400';
+            }
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            toast.classList.remove('hidden');
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        function closeToast() {
+            const toast = document.getElementById('notificationToast');
+            toast.classList.add('hidden');
+        }
+
+        function addAssignee() {
+            const assigneeList = document.getElementById('assigneeList');
+            const newAssigneeHTML = `
+                <div class="flex items-center space-x-2 p-3 bg-gray-50 rounded-md">
+                    <input type="text" placeholder="Enter assignee ID" 
+                           class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-brand-500 focus:border-brand-500">
+                    <button onclick="removeAssignee(this)" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-trash text-sm"></i>
+                    </button>
+                </div>
+            `;
+            assigneeList.insertAdjacentHTML('beforeend', newAssigneeHTML);
+        }
+
+        function removeAssignee(button) {
+            button.closest('.flex').remove();
+        }
+
+        function testConnection() {
+            showLoading();
+            // TODO: Implement actual JIRA API connection test
+            setTimeout(() => {
+                hideLoading();
+                showNotification('Connection Test', 'Successfully connected to JIRA API', 'success');
+            }, 2000);
+        }
+
+        function saveSettings() {
+            showLoading();
+            // TODO: Implement settings save functionality
+            setTimeout(() => {
+                hideLoading();
+                closeSettings();
+                showNotification('Settings Saved', 'Your JIRA configuration has been saved successfully', 'success');
+            }, 1000);
+        }
+
+        function handleManualRefresh() {
+            showLoading();
+            // TODO: Implement manual worklog refresh
+            setTimeout(() => {
+                hideLoading();
+                showNotification('Data Refreshed', 'Worklog data has been updated with the latest information', 'success');
+            }, 3000);
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Settings button
+            document.querySelector('[data-event="click:toggleSettings"]').addEventListener('click', toggleSettings);
+            
+            // Close settings buttons
+            document.querySelectorAll('[data-event="click:closeSettings"]').forEach(btn => {
+                btn.addEventListener('click', closeSettings);
+            });
+            
+            // Add assignee button
+            document.querySelector('[data-event="click:addAssignee"]').addEventListener('click', addAssignee);
+            
+            // Remove assignee buttons
+            document.querySelectorAll('[data-event="click:removeAssignee"]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    removeAssignee(this);
+                });
+            });
+            
+            // Test connection button
+            document.querySelector('[data-event="click:testConnection"]').addEventListener('click', testConnection);
+            
+            // Save settings button
+            document.querySelector('[data-event="click:saveSettings"]').addEventListener('click', saveSettings);
+            
+            // Manual refresh button
+            document.querySelector('[data-event="click:handleManualRefresh"]').addEventListener('click', handleManualRefresh);
+            
+            // Close toast button
+            document.querySelector('[data-event="click:closeToast"]').addEventListener('click', closeToast);
+            
+            // Close modal when clicking outside
+            document.getElementById('settingsModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeSettings();
+                }
+            });
+        });
+
+        // Make functions globally accessible for inline event handlers
+        window.removeAssignee = removeAssignee;
+    })();
+    </script>
+</body>
+</html>
